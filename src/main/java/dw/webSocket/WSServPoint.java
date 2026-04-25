@@ -2,6 +2,8 @@ package dw.webSocket;
 
 import com.alibaba.fastjson.JSONObject;
 import dw.pojo.Msg;
+import org.apache.commons.lang3.ArrayUtils;
+
 
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
@@ -11,7 +13,7 @@ import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.CopyOnWriteArraySet;
+
 
 @ServerEndpoint(value="/chatroom")
 public class WSServPoint {
@@ -103,13 +105,16 @@ public class WSServPoint {
         }
 
     }
-
+    byte[]bc=null;
     @OnMessage
     public void onMessage(byte[] input, Session session, boolean flag) {
         if(!flag){
-            System.out.println(input.length+"||"+flag);
+            bc= ArrayUtils.addAll(bc, input);
         }else {
-            System.out.println(input.length+"||"+flag);
+            bc= ArrayUtils.addAll(bc, input);
+            ByteBuffer bb=ByteBuffer.wrap(bc);
+            broadcast(us.keySet(), bb);
+            bc=null;
         }
     }
 
@@ -127,5 +132,13 @@ public class WSServPoint {
             }
         }
     }
-   
+    public void broadcast(Set<Session>set, ByteBuffer bb){
+        for(Session s:set){
+            try {
+                s.getBasicRemote().sendBinary(bb);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

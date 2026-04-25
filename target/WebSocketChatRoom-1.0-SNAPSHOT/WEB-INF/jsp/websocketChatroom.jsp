@@ -1,6 +1,6 @@
 <%--
   Created by IntelliJ IDEA.
-  User: 梁霁轩
+  User: YuQi
   Date: 2026/4/20
   Time: 23:14
   To change this template use File | Settings | File Templates.
@@ -22,6 +22,9 @@
     $("#send").click(function(){
       ws_sendMsg();
       $("#msg").val("");
+    });
+    $("#uploadImg").click(function(){
+      ws_sendImg();
     });
   });
   function ws_connect(){
@@ -46,21 +49,32 @@
     };
 
     ws.onmessage = function (message) {
-      //console.log("@@@"+message.data);
-      var receiveMsg=message.data;
-      var obj=JSON.parse(receiveMsg);
-      if (obj.type==="s"){
-        $("#record").append("<div>"+obj.msgDateStr+""+obj.msgInfo+"</div>");
-        var userHtml="";
-        var userList=obj.userList;
-        for (var i=0;i<userList.length;i++){
+      if (typeof (message.data) === 'string') {
+        var receiveMsg=message.data;
+        var obj=JSON.parse(receiveMsg);
+        if (obj.type==="s"){
+          $("#record").append("<div>"+obj.msgDateStr+""+obj.msgInfo+"</div>");
+          var userHtml="";
+          var userList=obj.userList;
+          for (var i=0;i<userList.length;i++){
             userHtml=userHtml+userList[i]+"<br/><br/>";
+          }
+          $("#userList").html(userHtml);
         }
-        $("#userList").html(userHtml);
+        else if (obj.type==="p"){
+          $("#record").append("<div>"+obj.msgSender+":&nbsp;"+obj.msgDateStr+"</div><div>"+obj.msgInfo+"</div>");
+        }
+      }else{
+        var reader=new FileReader();
+        reader.readAsDataURL(message.data);
+        reader.onload=function(e){
+          if (e.target.readyState===FileReader.DONE){
+            var url=e.target.result;
+            $("#record").append("<div><img src='"+url+"'style='max-height:150px; max-width:150px;vertical-align: middle;align-content: center;'/></div>");
+          }
+        }
       }
-      else if (obj.type==="p"){
-        $("#record").append("<div>"+obj.msgSender+":&nbsp;"+obj.msgDateStr+"</div><div>"+obj.msgInfo+"</div>");
-      }
+
     };
 
   };
@@ -69,6 +83,19 @@
     ws.send(msg);
   };
   function ws_sendImg(){
+        var fObj=$("#img")[0].files[0];
+        if (fObj){
+          var reader=new FileReader();
+          reader.readAsArrayBuffer(fObj);
+          reader.onload=function(e){
+            var imgData=e.target.result;
+            ws.send(imgData);
+          }
+          $("#img").val("");
+        }else{
+          $("#img").val("");
+        }
+
   };
   </script>
 </head>
