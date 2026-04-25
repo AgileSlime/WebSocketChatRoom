@@ -8,6 +8,7 @@ import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -103,6 +104,14 @@ public class WSServPoint {
 
     }
 
+    @OnMessage
+    public void onMessage(byte[] input, Session session, boolean flag) {
+        if(!flag){
+            System.out.println(input.length+"||"+flag);
+        }else {
+            System.out.println(input.length+"||"+flag);
+        }
+    }
 
     @OnError
     public void onError(Throwable t) {
@@ -118,4 +127,5 @@ public class WSServPoint {
             }
         }
     }
+   
 }

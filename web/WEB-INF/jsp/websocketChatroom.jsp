@@ -1,6 +1,6 @@
 <%--
   Created by IntelliJ IDEA.
-  User: 梁霁轩
+  User: YuQi
   Date: 2026/4/20
   Time: 23:14
   To change this template use File | Settings | File Templates.
@@ -22,6 +22,9 @@
     $("#send").click(function(){
       ws_sendMsg();
       $("#msg").val("");
+    });
+    $("#uploadImg").click(function(){
+      ws_sendImg();
     });
   });
   function ws_connect(){
@@ -69,6 +72,19 @@
     ws.send(msg);
   };
   function ws_sendImg(){
+        var fObj=$("#img")[0].files[0];
+        if (fObj){
+          var reader=new FileReader();
+          reader.readAsArrayBuffer(fObj);
+          reader.onload=function(e){
+            var imgData=e.target.result;
+            ws.send(imgData);
+          }
+          $("#img").val("");
+        }else{
+          $("#img").val("");
+        }
+
   };
   </script>
 </head>
