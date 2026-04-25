@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 @ServerEndpoint(value="/chatroom")
@@ -68,13 +69,38 @@ public class WSServPoint {
 
     @OnMessage
     public void onMessage(String message,Session session) throws IOException, InterruptedException {
-        System.out.println("信息已接受！！！"+message);
         ms=new Msg();
         ms.setType("p");
         ms.setMsgSender(map.get("loginName"));
         ms.setMsgDate(new Date());
-        ms.setMsgInfo(message);
-        broadcast(us.keySet(), JSONObject.toJSONString(ms));
+
+        if(message.startsWith("@")&&message.contains(":")){
+            String reivName=message.substring(message.indexOf("@")+1,message.indexOf(":"));
+            if(us.containsValue(reivName)){
+                for(Entry<Session,String>e:us.entrySet()){
+                    if(reivName.equals(e.getValue())){
+                        Session reivSession=e.getKey();
+                        message=message.substring(message.indexOf(":")+1);
+                        ms.setMsgInfo(map.get("loginName")+"-私信->"+reivName+":"+message);
+                        ms.setMsgReceiver(reivName);
+                        Set<Session>hashSet=new HashSet<>();
+                        hashSet.add(reivSession);
+                        hashSet.add(session);
+                        broadcast(hashSet, JSONObject.toJSONString(ms));
+                        break;
+                    }
+                }
+            }else {
+                System.out.println("信息已接受！！！"+message);
+                ms.setMsgInfo(message);
+                broadcast(us.keySet(), JSONObject.toJSONString(ms));
+            }
+        }else {
+            System.out.println("信息已接受！！！"+message);
+            ms.setMsgInfo(message);
+            broadcast(us.keySet(), JSONObject.toJSONString(ms));
+        }
+
     }
 
 
