@@ -115,6 +115,11 @@ public class WSServPoint {
             ByteBuffer bb=ByteBuffer.wrap(bc);
             broadcast(us.keySet(), bb);
             bc=null;
+            Msg ms=new Msg();
+            ms.setMsgSender(map.get("loginName"));
+            ms.setMsgDate(new Date());
+            ms.setType("f");
+            broadcast(us.keySet(), JSONObject.toJSONString(ms));
         }
     }
 

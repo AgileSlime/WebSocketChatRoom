@@ -63,6 +63,8 @@
         }
         else if (obj.type==="p"){
           $("#record").append("<div>"+obj.msgSender+":&nbsp;"+obj.msgDateStr+"</div><div>"+obj.msgInfo+"</div>");
+        }else if (obj.type==="f"){
+          picp="<div>"+obj.msgSender+":&nbsp;"+obj.msgDateStr+"</div>";
         }
       }else{
         var reader=new FileReader();
@@ -70,7 +72,7 @@
         reader.onload=function(e){
           if (e.target.readyState===FileReader.DONE){
             var url=e.target.result;
-            $("#record").append("<div><img src='"+url+"'style='max-height:150px; max-width:150px;vertical-align: middle;align-content: center;'/></div>");
+            $("#record").append(picp+"<div><img src='"+url+"'style='max-height:150px; max-width:150px;vertical-align: middle;align-content: center;'/></div>");
           }
         }
       }
