@@ -13,8 +13,10 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 @ServerEndpoint(value="/chatroom")
 public class WSServPoint {
-    static Set<Session> set = new CopyOnWriteArraySet<>();
-    static  List<String>userList=new ArrayList<>();
+   // static Set<Session> set = new CopyOnWriteArraySet<>();
+    //static  List<String>userList=new ArrayList<>();
+    private static Map<Session,String>us=new HashMap<Session,String>();
+
     Map<String,String>map;
     private Msg ms;
     @OnOpen
@@ -34,30 +36,32 @@ public class WSServPoint {
             String[] strs=msg.split("=");
             map.put(strs[0],strs[1]);
         }
-        userList.add(map.get("loginName"));
+        //userList.add(map.get("loginName"));
+        us.put(session,map.get("loginName"));
         System.out.println("map:"+map);
         ms=new Msg();
         ms.setType("s");
         ms.setMsgSender("system");
         ms.setMsgDate(new Date());
-        ms.setUserList(userList);
+        ms.setUserList(new ArrayList<String>(us.values()));
         ms.setMsgInfo(map.get("loginName")+"已上线");
-        set.add(session);
-        broadcast(set, JSONObject.toJSONString(ms));
+
+        broadcast(us.keySet(), JSONObject.toJSONString(ms));
     }
 
 
     @OnClose
     public void onClose(Session session) {
-        userList.remove(map.get("loginName"));
+       // userList.remove(map.get("loginName"));
+        us.remove(session);
         ms=new Msg();
         ms.setType("s");
         ms.setMsgSender("system");
         ms.setMsgDate(new Date());
-        ms.setUserList(userList);
+        ms.setUserList(new ArrayList<String>(us.values()));
         ms.setMsgInfo(map.get("loginName")+"已下线");
-        set.remove(session);
-        broadcast(set, JSONObject.toJSONString(ms));
+
+        broadcast(us.keySet(), JSONObject.toJSONString(ms));
         System.out.println("连接已关闭！！！");
     }
 
@@ -70,7 +74,7 @@ public class WSServPoint {
         ms.setMsgSender(map.get("loginName"));
         ms.setMsgDate(new Date());
         ms.setMsgInfo(message);
-        broadcast(set,JSONObject.toJSONString(ms));
+        broadcast(us.keySet(), JSONObject.toJSONString(ms));
     }
 
 
@@ -79,7 +83,7 @@ public class WSServPoint {
         System.out.println("系统异常！！！");
         t.printStackTrace();
     }
-    public void broadcast(Set<Session>set, String message){
+    public void broadcast(Collection<Session>set, String message){
         for(Session s:set){
             try {
                 s.getBasicRemote().sendText(message);
