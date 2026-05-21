@@ -28,7 +28,7 @@ public class WSServPoint {
     private static volatile boolean initialized = false;
 
     private static final long HEARTBEAT_TIMEOUT = 30000; // 30 seconds
-    private static final long PING_INTERVAL = 10000;     // 10 seconds
+    private static final long PING_INTERVAL = 5000;      // 5 seconds
 
     public WSServPoint() {
         if (!initialized) {
