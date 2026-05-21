@@ -1,25 +1,41 @@
 package dw.servlet;
 
-import javax.servlet.*;
+import dw.dao.UserDAO;
+import dw.pojo.User;
+import dw.util.JWTUtil;
+import org.mindrot.jbcrypt.BCrypt;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
-import javax.servlet.annotation.*;
-import javax.websocket.Session;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 @WebServlet(name = "LoginServlet", value = "/login")
 public class LoginServlet extends HttpServlet {
+    private final UserDAO userDAO = new UserDAO();
 
     @Override
-    protected void service(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.setCharacterEncoding("utf-8");
-        response.setContentType("text/html;charset=utf-8");
-        String userName = request.getParameter("userName");
-        String userPwd = request.getParameter("userPwd");
-        System.out.println(userName+"||"+userPwd);
-        HttpSession session = request.getSession();
-        session.setAttribute("loginName",userName);
-        System.out.println("sessionID为："+session.getId());
-        request.getRequestDispatcher("/WEB-INF/jsp/websocketChatroom.jsp").forward(request, response);
+        response.setContentType("application/json;charset=utf-8");
+        PrintWriter out = response.getWriter();
+
+        String username = request.getParameter("userName");
+        String password = request.getParameter("userPwd");
+
+        User user = userDAO.findByUsername(username);
+        if (user == null) {
+            out.print("{\"success\":false,\"msg\":\"用户不存在\"}");
+            return;
+        }
+
+        if (!BCrypt.checkpw(password, user.getPassword())) {
+            out.print("{\"success\":false,\"msg\":\"密码错误\"}");
+            return;
+        }
+
+        String token = JWTUtil.generateToken(user.getUsername(), user.getId());
+        out.print("{\"success\":true,\"token\":\"" + token + "\",\"username\":\"" + user.getUsername() + "\",\"userId\":" + user.getId() + "}");
     }
 }
