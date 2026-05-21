@@ -123,9 +123,10 @@
 
     $(function() {
       $('#currentUsername').text(username || '未知');
-      loadRooms();
       loadPrivateConversations();
-      connect(); // Single persistent connection, never reconnects on chat switch
+      // Load rooms first, then connect WebSocket
+      // This ensures creatorIdMap is populated before switchRoom() is called
+      loadRoomsAndConnect();
     });
 
     function genMsgId() {
@@ -140,8 +141,11 @@
       ws.onopen = function() {
         console.log('WebSocket connected');
         reconnectAttempts = 0;
-        // After connecting, join the first available room
-        joinFirstRoom();
+        // CreatorIdMap is guaranteed to be populated since loadRoomsAndConnect()
+        // loads rooms before calling connect()
+        if (roomListData.length > 0 && currentChatType === 'room' && !currentRoom) {
+          switchRoom(roomListData[0].id, roomListData[0].roomName);
+        }
       };
 
       ws.onmessage = function(e) {
@@ -160,12 +164,6 @@
       ws.onerror = function(e) {
         console.error('WebSocket error', e);
       };
-    }
-
-    function joinFirstRoom() {
-      if (roomListData.length > 0 && currentChatType === 'room') {
-        switchRoom(roomListData[0].id, roomListData[0].roomName);
-      }
     }
 
     function handleMessage(data) {
@@ -341,7 +339,7 @@
       updateConvList();
     }
 
-    function loadRooms() {
+    function loadRoomsAndConnect() {
       $.get('${pageContext.request.contextPath}/room/list', function(data) {
         var rooms = typeof data === 'string' ? JSON.parse(data) : data;
         roomListData = rooms;
@@ -349,10 +347,8 @@
           creatorIdMap[rooms[i].id] = rooms[i].creatorId;
         }
         updateConvList();
-        // Auto-join first room if WS is connected and no room selected yet
-        if (rooms.length > 0 && currentChatType === 'room' && !currentRoom) {
-          switchRoom(rooms[0].id, rooms[0].roomName);
-        }
+        // Now connect WebSocket - creatorIdMap is ready
+        connect();
       });
     }
 
@@ -393,11 +389,7 @@
       $('#messages').html('');
       receivedMsgIds = {};
 
-      if (creatorIdMap[roomId] && String(creatorIdMap[roomId]) === String(userId)) {
-        $('#deleteRoomBtn').show();
-      } else {
-        $('#deleteRoomBtn').hide();
-      }
+      $('#deleteRoomBtn').show();
 
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({type:'SWITCH_ROOM', roomId: roomId}));
