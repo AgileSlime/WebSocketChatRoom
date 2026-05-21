@@ -1,50 +1,120 @@
-# WebSocketChatRoom 项目说明
-## 一、项目基础信息
-### 1. 开发环境
-- JDK 版本：Java 1.8
-- 开发工具：IntelliJ IDEA 2022.3
-- 服务器：Apache Tomcat 9.0
-### 2. 核心技术栈
-- 后端：Servlet + WebSocket（JSR 356 标准）
-- 前端：JSP 
-- 通信协议：WebSocket（双向实时通信）
+# WebSocketChatRoom
+
+基于 JSR 356 WebSocket 的多人实时聊天室，支持多房间隔离、JWT 认证、私聊、离线消息缓存。
+
+## 一、技术栈
+
+| 层次 | 技术 |
+|---|---|
+| 后端 | Servlet 3.0 + WebSocket (JSR 356) + JDBC |
+| 前端 | JSP + jQuery + Vanilla JS |
+| 认证 | JWT (jjwt) + BCrypt 密码加密 |
+| 数据库 | MySQL 8.0 |
+| 缓存 | Redis (Jedis) — 离线消息/聊天历史 |
+| 服务器 | Apache Tomcat 9.0 |
+| JDK | Java 1.8 |
 
 ## 二、核心功能
-1. 群聊功能：多用户实时接入聊天室，文本消息全局广播，支持用户进入/离开的系统通知；
-2. 私聊功能：通过 `@用户名:` 指令触发一对一私密聊天，消息仅推送至指定用户，不向群聊广播；
-3. 图片发送：支持客户端上传并实时发送图片，接收方可直接在聊天界面查看；
-4. 基础交互优化：修复空内容发送 Bug，美化登录/聊天界面，提升操作体验。
 
-## 三、快速运行步骤
-1. 项目导入：使用 IntelliJ IDEA 导入该项目，确保本地已配置 Java 1.8 + Tomcat 9.0 环境；
-2. 网络配置：修改项目中 `web/jsp/websocketChatRoom.jsp` 文件内的 `ws_url` 变量，确保 WebSocket 连接地址与本地 Tomcat 端口/项目路径匹配；
-3. 启动运行：点击 IDEA 运行按钮，项目启动后会自动弹出主页；
-4. 访问方式：本地浏览器访问 `http://localhost:8080/WebSocketChatRoom_war_exploded/login`（或自行编译为 WAR 包部署至 Tomcat webapps 目录运行）。
+1. **多房间聊天** — 创建/加入/删除房间，消息按房间隔离，房间创建者有删除权限
+2. **私聊** — 从在线用户列表或左侧会话列表发起一对一私聊，离线消息自动缓存
+3. **会话管理** — 统一会话列表（群聊 + 私聊），支持删除私聊会话（历史记录保留 7 天）
+4. **JWT 认证** — 注册/登录发放 Token，WebSocket 连接携带 Token 验证身份
+5. **离线消息** — 用户上线自动拉取离线私信和房间历史（Redis 缓存，7 天过期）
+6. **心跳保活** — 服务端每 5 秒 PING，30 秒超时自动清理离线连接
+7. **自动重连** — 客户端断线后指数退避重连（最多 10 次）
+8. **应用层 ACK** — 消息确认、去重、防重复渲染
 
-## 四、功能使用方法
-### 1. 基础群聊使用
-- 登录聊天室：访问登录页面后，输入用户名完成登录，自动接入群聊环境；
-- 发送群消息：在聊天输入框中输入文本内容，点击send按钮，消息实时推送至所有在线群聊用户；
-- 系统通知：新用户进入/离开聊天室时，所有在线用户会收到系统级通知提示。
+## 三、快速启动
 
-### 2. 私聊使用（@用户名: 触发）
-- 触发私聊：在聊天输入框中按格式 `@目标用户名: 私聊内容` 输入消息（例：`@张三: 你好，这是私聊消息`）；
-- 发送私聊：点击send按钮，后端解析指令后，仅将消息推送至 `@` 后的目标用户名，发送方和接收方可看到专属私聊消息；
-- 查看私聊：私聊消息在聊天界面中会与群消息区分展示（如特殊样式/标注），仅双方可见。
+### 1. 前置条件
 
-### 3. 图片发送使用
-- 选择图片：点击聊天界面的选择文件，从本地选择需发送的图片文件（支持常见格式：JPG/PNG 等）；
-- 发送图片：确认选择后点击uploadImg，图片通过 WebSocket 实时传输，群聊/私聊场景下分别推送至对应对象；
-- 查看图片：接收方在聊天窗口中可直接预览图片，无需额外下载或跳转。
+- JDK 1.8 + Apache Tomcat 9.0
+- MySQL 8.0（创建数据库并导入 `chatroom.sql`）
+- Redis（默认 localhost:6379）
 
-## 五、核心技术说明
-### 1. 后端核心逻辑
-- WebSocket 端点：通过 `@ServerEndpoint` 注解定义通信端点，监听用户连接（`@OnOpen`）、消息接收（`@OnMessage`）、连接关闭（`@OnClose`）；
-- 消息路由：
-  - 群聊：接收消息后遍历所有在线用户 Session，广播消息；
-  - 私聊：解析 `@用户名:` 指令，提取目标用户名，通过 Session 映射表找到对应用户 Session，仅推送该消息；
-- Servlet 辅助：处理登录请求、用户状态临时存储等基础交互；
-### 2. 前端核心逻辑
-- WebSocket 连接：在 `websocketChatRoom.jsp` 中通过 `ws_url` 建立与后端的 WebSocket 长连接；
-- 指令解析：输入框内容提交前，识别 `@用户名:` 格式，封装对应消息体发送至后端；
-- 界面渲染：基于 Bootstrap 实现响应式布局，区分群聊/私聊消息样式，图片接收后通过 DOM 渲染展示。
+### 2. 配置数据库
+
+修改 `src/main/java/dw/util/DBUtil.java` 中的数据库连接信息：
+
+```java
+String url = "jdbc:mysql://localhost:3306/chatroom?useSSL=false&characterEncoding=utf8";
+String username = "root";
+String password = "你的密码";
+```
+
+### 3. 部署运行
+
+1. 使用 IntelliJ IDEA 导入项目
+2. 配置 Tomcat 运行环境
+3. 启动后访问 `http://localhost:8080/WebSocketChatRoom_war/`
+
+### 4. WebSocket 连接
+
+```javascript
+var ws = new WebSocket('ws://localhost:8080/WebSocketChatRoom_war/chatroom?token=' + token);
+```
+
+## 四、项目结构
+
+```
+├── src/main/java/dw/
+│   ├── pojo/          # 实体类 (User, Room, Msg, UserSession, RoomMember)
+│   ├── dao/           # 数据访问层 (UserDAO, RoomDAO, MessageDAO)
+│   ├── servlet/       # Servlet (Login, Register, Room, Chat, SSE)
+│   ├── webSocket/     # WebSocket 端点 (WSServPoint)
+│   ├── service/       # 业务服务 (OfflineMessageService)
+│   └── util/          # 工具类 (DBUtil, JWTUtil, RedisUtil)
+├── web/
+│   ├── index.jsp      # 登录页
+│   ├── register.jsp   # 注册页
+│   └── WEB-INF/jsp/   # 聊天页面 (websocketChatroom.jsp, privateChat.jsp)
+├── chatroom.sql       # 数据库建表脚本
+├── protocol.md        # WebSocket 通信协议文档
+└── stress_test_report.md  # 压力测试报告
+```
+
+## 五、数据库表
+
+| 表名 | 说明 |
+|---|---|
+| `user` | 用户表 (id, username, password(BCrypt), create_time) |
+| `room` | 房间表 (id, room_name, creator_id, create_time) |
+| `room_member` | 房间成员关联表 (id, room_id, user_id, join_time) |
+
+## 六、REST API
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/login` | 用户登录，返回 JWT Token |
+| POST | `/register` | 用户注册 |
+| GET | `/room/list` | 获取房间列表 |
+| POST | `/room/create` | 创建房间 (需 JWT) |
+| POST | `/room/delete` | 删除房间 (仅创建者可操作) |
+| GET | `/chat` | 进入群聊页面 |
+
+## 七、WebSocket 协议
+
+完整协议文档见 [protocol.md](protocol.md)
+
+| 消息类型 | 方向 | 说明 |
+|---|---|---|
+| CHAT | C→S | 发送房间消息 |
+| PRIVATE | C→S | 发送私聊消息 |
+| SWITCH_ROOM | C→S | 切换房间（不断开连接） |
+| LOAD_PRIVATE_HISTORY | C→S | 加载私聊历史 |
+| SYSTEM | S→C | 系统通知（用户进出/在线列表） |
+| PING | S→C | 心跳（每 5 秒） |
+| PONG | C→S | 心跳响应 |
+| ACK | C→S | 应用层确认 |
+
+## 八、压力测试
+
+详见 [stress_test_report.md](stress_test_report.md)
+
+| 指标 | WebSocket | SSE |
+|---|---|---|
+| 1000 并发成功率 | 100% | 18.6% |
+| 每连接内存 | 0.60 MB | 1.00 MB |
+| 消息延迟 | < 50 ms | 200-500 ms |
+| 双向通信 | 支持 | 不支持 |
